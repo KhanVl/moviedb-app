@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import fallbackPoster from '@/public/no-image.png';
 import { Card, Rate, Tag, Typography } from 'antd';
 import type { CSSProperties } from 'react';
 import { format } from 'date-fns';
@@ -21,7 +22,7 @@ type Props = { movie: Movie };
 export function MovieCard({ movie }: Props) {
   const src = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-    : '/no-image.png';
+    : fallbackPoster;
 
   const formattedDate = movie.release_date
     ? format(new Date(movie.release_date), 'MMMM d, yyyy')
