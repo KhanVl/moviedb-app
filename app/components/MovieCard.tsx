@@ -2,11 +2,19 @@
 
 import Image from 'next/image';
 import { Card, Rate, Tag, Typography } from 'antd';
+import type { CSSProperties } from 'react';
 import { format } from 'date-fns';
 import type { Movie } from '../types';
 import { truncateText } from '../../lib/truncateText';
 
 const { Paragraph, Text, Title } = Typography;
+
+const bodyStyles: CSSProperties = {
+  padding: 16,
+  display: 'flex',
+  flexDirection: 'column',
+  flex: 1,
+};
 
 type Props = { movie: Movie };
 
@@ -25,8 +33,8 @@ export function MovieCard({ movie }: Props) {
   return (
     <Card
       hoverable
-      style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-      bodyStyle={{ padding: 16, display: 'flex', flexDirection: 'column', flex: 1 }}
+      style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
+      styles={{ body: bodyStyles }}
       cover={
         <div style={{ position: 'relative', width: '100%', height: 260 }}>
           <Image
@@ -35,7 +43,6 @@ export function MovieCard({ movie }: Props) {
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 300px"
             style={{ objectFit: 'cover' }}
-            priority={false}
           />
         </div>
       }
