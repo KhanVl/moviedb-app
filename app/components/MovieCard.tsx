@@ -17,7 +17,7 @@ const bodyStyles: CSSProperties = {
   flex: 1,
 };
 
-type Props = { movie: Movie };
+type Props = { movie: Movie; isFirst?: boolean };
 
 export function MovieCard({ movie }: Props) {
   const src = movie.poster_path
