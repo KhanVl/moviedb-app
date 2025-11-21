@@ -6,6 +6,8 @@ import type { Movie } from './types';
 
 type SP = { q?: string | string[]; page?: string | string[] };
 
+export const dynamic = 'force-dynamic';
+
 async function getMovies(query: string, page: number) {
   const trimmed = query.trim();
 

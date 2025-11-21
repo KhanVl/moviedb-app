@@ -6,6 +6,8 @@ import type { Movie } from '../types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
+export const dynamic = 'force-dynamic';
+
 async function ensureGuestId(): Promise<string> {
   const cookieStore = await cookies();
   const existing = cookieStore.get('tmdb_guest_id')?.value;
