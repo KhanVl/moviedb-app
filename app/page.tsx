@@ -1,12 +1,23 @@
-// app/page.tsx (Server Component)
 import SearchBox from './components/SearchBox';
 import Pager from './components/Pager';
 import { MovieList } from './components/MovieList';
+import TabsHeader from './components/TabsHeader';
 import type { Movie } from './types';
 
 type SP = { q?: string | string[]; page?: string | string[] };
 
 async function getMovies(query: string, page: number) {
+  const trimmed = query.trim();
+
+  if (!trimmed) {
+    return {
+      results: [] as Movie[],
+      totalResults: 0,
+      page: 1,
+      pageSize: 20,
+    };
+  }
+
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) throw new Error('TMDB_API_KEY is not set');
 
@@ -15,7 +26,7 @@ async function getMovies(query: string, page: number) {
   url.searchParams.set('language', 'en-US');
   url.searchParams.set('include_adult', 'false');
   url.searchParams.set('page', String(Math.max(1, page)));
-  url.searchParams.set('query', query || 'return'); // дефолт при пустом запросе
+  url.searchParams.set('query', trimmed);
 
   const res = await fetch(url.toString(), { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch movies');
@@ -52,12 +63,20 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <main style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
-      <SearchBox defaultQuery={q} />
-      <MovieList movies={results} />
-      {totalResults > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24 }}>
-          <Pager total={totalResults} current={page} pageSize={pageSize} />
-        </div>
+      <TabsHeader />
+      <div style={{ marginTop: 24, marginBottom: 24 }}>
+        <SearchBox defaultQuery={q} />
+      </div>
+
+      {q && (
+        <>
+          <MovieList movies={results} />
+          {totalResults > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24 }}>
+              <Pager total={totalResults} current={page} pageSize={pageSize} />
+            </div>
+          )}
+        </>
       )}
     </main>
   );

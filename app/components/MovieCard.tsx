@@ -2,24 +2,28 @@
 
 import Image from 'next/image';
 import fallbackPoster from '@/public/no-image.png';
-import { Card, Rate, Tag, Typography } from 'antd';
+import { Card, Rate, Tag, Typography, message } from 'antd';
 import type { CSSProperties } from 'react';
 import { format } from 'date-fns';
+import { useState, useTransition } from 'react';
 import type { Movie } from '../types';
 import { truncateText } from '../../lib/truncateText';
+import { useGenres } from '../providers/GenresProvider';
+import RatingBadge from './RatingBadge';
 
 const { Paragraph, Text, Title } = Typography;
 
 const bodyStyles: CSSProperties = {
-  padding: 16,
   display: 'flex',
-  flexDirection: 'column',
-  flex: 1,
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+  padding: 16,
+  gap: 16,
 };
 
 type Props = { movie: Movie; isFirst?: boolean };
 
-export function MovieCard({ movie }: Props) {
+export function MovieCard({ movie, isFirst = false }: Props) {
   const src = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
     : fallbackPoster;
@@ -28,47 +32,143 @@ export function MovieCard({ movie }: Props) {
     ? format(new Date(movie.release_date), 'MMMM d, yyyy')
     : 'Unknown date';
 
-  const rating = movie.vote_average ? movie.vote_average / 2 : 0;
-  const genres = ['Drama', 'Sport'];
+  const tmdbStars = movie.vote_average ? movie.vote_average / 2 : 0;
+
+  const [stars, setStars] = useState<number | undefined>(undefined);
+  const [isPending, startTransition] = useTransition();
+
+  const { genresById } = useGenres();
+  const genreNames = (movie.genre_ids ?? [])
+    .map((id) => genresById[id])
+    .filter(Boolean) as string[];
+
+  const handleRateChange = (v: number) => {
+    setStars(v);
+
+    startTransition(async () => {
+      try {
+        const res = await fetch(`/api/rate/${movie.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: v * 2 }), // 0–5 → 0–10
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          console.error('Rate error', res.status, errData);
+          throw new Error('Failed to rate');
+        }
+
+        message.success('Rated!');
+      } catch (err) {
+        console.error('Rate request failed', err);
+        message.error('Failed to rate');
+        setStars((prev) => prev);
+      }
+    });
+  };
+
+  const currentStars = stars ?? tmdbStars;
 
   return (
     <Card
       hoverable
-      style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
+      style={{
+        width: '100%',
+        borderRadius: 12,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+      }}
       styles={{ body: bodyStyles }}
-      cover={
-        <div style={{ position: 'relative', width: '100%', height: 260 }}>
-          <Image
-            src={src}
-            alt={movie.title}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 300px"
-            style={{ objectFit: 'cover' }}
-          />
-        </div>
-      }
     >
-      <Title level={5} style={{ marginBottom: 4 }}>
-        {movie.title}
-      </Title>
-
-      <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
-        {formattedDate}
-      </Text>
-
-      <div style={{ marginBottom: 8 }}>
-        {genres.map((g) => (
-          <Tag key={g}>{g}</Tag>
-        ))}
+      <div style={{ position: 'absolute', top: 16, right: 16 }}>
+        <RatingBadge value={movie.vote_average ?? 0} />
       </div>
 
-      <Paragraph className="movie-desc" type="secondary" style={{ flex: 1 }}>
-        {truncateText(movie.overview, 400)}
-      </Paragraph>
+      <div
+        style={{
+          position: 'relative',
+          flex: '0 0 96px',
+          width: 96,
+          height: 144,
+          borderRadius: 4,
+          overflow: 'hidden',
+        }}
+      >
+        <Image
+          src={src}
+          alt={movie.title}
+          fill
+          priority={isFirst}
+          loading={isFirst ? 'eager' : undefined}
+          sizes="96px"
+          style={{ objectFit: 'cover' }}
+        />
+      </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-        <Rate allowHalf disabled defaultValue={rating} />
-        <Text type="secondary">{movie.vote_average.toFixed(1)}</Text>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        <Title level={5} style={{ marginBottom: 4 }}>
+          {movie.title}
+        </Title>
+
+        <Text type="secondary" style={{ display: 'block', marginBottom: 4, fontSize: 12 }}>
+          {formattedDate}
+        </Text>
+
+        <div
+          style={{
+            marginBottom: 8,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 6,
+          }}
+        >
+          {genreNames.length ? (
+            genreNames.map((g) => (
+              <Tag key={g} style={{ fontSize: 11, paddingInline: 8 }}>
+                {g}
+              </Tag>
+            ))
+          ) : (
+            <Tag style={{ fontSize: 11, paddingInline: 8 }}>Unknown</Tag>
+          )}
+        </div>
+
+        <Paragraph
+          className="movie-desc"
+          type="secondary"
+          style={{
+            flex: 1,
+            marginBottom: 10,
+            fontSize: 12,
+            lineHeight: 1.4,
+          }}
+        >
+          {truncateText(movie.overview, 180)}
+        </Paragraph>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <Rate
+            allowHalf
+            count={10}
+            value={currentStars * 2}
+            onChange={(v) => handleRateChange(v / 2)}
+            disabled={isPending}
+            style={{ fontSize: 12 }}
+          />
+        </div>
       </div>
     </Card>
   );
