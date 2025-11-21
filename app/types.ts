@@ -6,6 +6,7 @@ export type Movie = {
   release_date: string;
   vote_average: number;
   genre_ids?: number[];
+  rating?: number;
 };
 
 export type Genre = { id: number; name: string };

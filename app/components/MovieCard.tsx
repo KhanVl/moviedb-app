@@ -32,9 +32,11 @@ export function MovieCard({ movie, isFirst = false }: Props) {
     ? format(new Date(movie.release_date), 'MMMM d, yyyy')
     : 'Unknown date';
 
-  const tmdbStars = movie.vote_average ? movie.vote_average / 2 : 0;
+  const tmdbValue10 = movie.vote_average ?? 0;
 
-  const [stars, setStars] = useState<number | undefined>(undefined);
+  const initialUserRating10 = typeof movie.rating === 'number' ? movie.rating : undefined;
+
+  const [userRating10, setUserRating10] = useState<number | undefined>(initialUserRating10);
   const [isPending, startTransition] = useTransition();
 
   const { genresById } = useGenres();
@@ -42,15 +44,15 @@ export function MovieCard({ movie, isFirst = false }: Props) {
     .map((id) => genresById[id])
     .filter(Boolean) as string[];
 
-  const handleRateChange = (v: number) => {
-    setStars(v);
+  const handleRateChange = (value10: number) => {
+    setUserRating10(value10);
 
     startTransition(async () => {
       try {
         const res = await fetch(`/api/rate/${movie.id}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value: v * 2 }), // 0–5 → 0–10
+          body: JSON.stringify({ value: value10 }),
         });
 
         if (!res.ok) {
@@ -63,12 +65,10 @@ export function MovieCard({ movie, isFirst = false }: Props) {
       } catch (err) {
         console.error('Rate request failed', err);
         message.error('Failed to rate');
-        setStars((prev) => prev);
+        setUserRating10((prev) => prev);
       }
     });
   };
-
-  const currentStars = stars ?? tmdbStars;
 
   return (
     <Card
@@ -77,11 +77,12 @@ export function MovieCard({ movie, isFirst = false }: Props) {
         width: '100%',
         borderRadius: 12,
         boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+        position: 'relative',
       }}
       styles={{ body: bodyStyles }}
     >
       <div style={{ position: 'absolute', top: 16, right: 16 }}>
-        <RatingBadge value={movie.vote_average ?? 0} />
+        <RatingBadge value={tmdbValue10} />
       </div>
 
       <div
@@ -163,8 +164,8 @@ export function MovieCard({ movie, isFirst = false }: Props) {
           <Rate
             allowHalf
             count={10}
-            value={currentStars * 2}
-            onChange={(v) => handleRateChange(v / 2)}
+            value={userRating10 ?? 0}
+            onChange={handleRateChange}
             disabled={isPending}
             style={{ fontSize: 12 }}
           />
